@@ -1,8 +1,11 @@
 from django.db import models
 import uuid
 
+
 class BaseModel(models.Model):
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(primary_key=True,
+                            default=uuid.uuid4,
+                            editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -15,8 +18,7 @@ class SlackWorkspace(BaseModel):
     team_name = models.CharField(max_length=255)
     bot_user_id = models.CharField(max_length=32)
     bot_token = models.CharField(max_length=255)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
 class ConversationHistory(BaseModel):
     workspace = models.ForeignKey(SlackWorkspace, on_delete=models.CASCADE)
@@ -26,4 +28,4 @@ class ConversationHistory(BaseModel):
     user_id = models.CharField(max_length=32)
     message_text = models.TextField()
     is_bot_message = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    response = models.TextField(default="")
