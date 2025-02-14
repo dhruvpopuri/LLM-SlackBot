@@ -7,6 +7,7 @@ from .models import SlackWorkspace, ConversationHistory
 from slack_sdk import WebClient
 from rest_framework.renderers import JSONRenderer
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -16,17 +17,26 @@ class SlackEventsView(APIView):
     permission_classes = []
 
     def post(self, request, *args, **kwargs):
-        timestamp = request.headers.get('X-Slack-Request-Timestamp')
-        signature = request.headers.get('X-Slack-Signature')
+        event_data = None
+        try:
+            timestamp = request.headers.get('X-Slack-Request-Timestamp')
+            signature = request.headers.get('X-Slack-Signature')
 
-        event_data = request.data
-        if event_data.get('type') == 'url_verification':
-            return Response({'challenge': event_data['challenge']})
-        print(timestamp, signature)
+            event_data = request.data
+            if event_data.get('type') == 'url_verification':
+                return Response({'challenge': event_data['challenge']})
+            logger.debug(f"Received request with: {timestamp}, {signature}")
 
-        # Process event asynchronously
-        self.process_event(event_data)
-        return Response({'ok': True})
+            # Process event asynchronously
+            self.process_event(event_data)
+            return Response({'ok': True})
+        except KeyError as e:
+            logger.error(f"Invalid payload")
+            logger.debug(f"{json.dumps(event_data)}")
+            return Response({"error": f"Invalid Payload: {type(e).__name__} - {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error: {type(e).__name__} - {str(e)}")
+            return Response({"error": f"Unexpected Error {type(e).__name__} - {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def process_event(self, event_data):
         try:
