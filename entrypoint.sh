@@ -9,6 +9,9 @@ if [ "$DATABASE" = "postgres" ]; then
     echo "PostgreSQL started"
 fi
 
+echo "Making migrations and migrating the database. "
+python manage.py makemigrations --noinput
+python manage.py migrate --noinput
 python manage.py collectstatic --noinpu
 # Start Gunicorn
 exec gunicorn SlackChatbot.wsgi:application --bind 0.0.0.0:8000 --workers=4 --timeout=3600
