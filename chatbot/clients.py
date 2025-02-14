@@ -31,32 +31,6 @@ class GroqClient:
             logger.error(f"Groq API error: {e}")
             raise
 
-
-class FileServiceClient:
-
-    def __init__(self):
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
-
-    def upload_file(self, file_data, file_info):
-        """Upload file to S3"""
-        try:
-            file_key = f"uploads/{int(time.time())}_{file_info['name']}"
-            self.s3_client.put_object(Bucket=settings.S3_BUCKET,
-                                      Key=file_key,
-                                      Body=file_data,
-                                      ContentType=file_info['mimetype'])
-            return f"s3://{settings.S3_BUCKET}/{file_key}"
-        except Exception as e:
-            logger.error(f"Error uploading file: {e}")
-            raise
-
-
-logger = logging.getLogger(__name__)
-
-
 class SlackClient:
 
     def __init__(self, bot_token=None):

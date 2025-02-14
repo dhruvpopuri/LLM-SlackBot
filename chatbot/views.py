@@ -16,7 +16,6 @@ class SlackEventsView(APIView):
     permission_classes = []
 
     def post(self, request, *args, **kwargs):
-        # Verify Slack request
         timestamp = request.headers.get('X-Slack-Request-Timestamp')
         signature = request.headers.get('X-Slack-Signature')
 
@@ -24,10 +23,6 @@ class SlackEventsView(APIView):
         if event_data.get('type') == 'url_verification':
             return Response({'challenge': event_data['challenge']})
         print(timestamp, signature)
-        # if not SlackClient.verify_signature(event_data, timestamp, signature):
-        #     return Response(status=status.HTTP_401_UNAUTHORIZED)
-
-        # Handle URL verification
 
         # Process event asynchronously
         self.process_event(event_data)
@@ -44,14 +39,10 @@ class SlackEventsView(APIView):
             # Initialize services
             slack_service = SlackClient(workspace.bot_token)
             groq_service = GroqClient()
-            # file_service = FileServiceClient()
 
             if event.get('type') == 'app_mention':
                 self.handle_mention(event, workspace, slack_service,
                                     groq_service)
-            # elif event.get('type') == 'file_shared':
-            #     self.handle_file(event, workspace, slack_service, groq_service,
-            #                      file_service)
 
         except Exception as e:
             logger.error(f"Error processing event: {e}")
@@ -78,7 +69,6 @@ class SlackEventsView(APIView):
 
         messages.append({"role": "user", "content": event['text']})
 
-        # Get response from Groq
         response = groq_service.get_response(messages)
 
         # Save conversation
