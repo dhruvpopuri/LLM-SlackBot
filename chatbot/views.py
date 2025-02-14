@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings, time
-from .clients import GroqClient, SlackClient, FileServiceClient
+from .clients import GroqClient, SlackClient
 from .models import SlackWorkspace, ConversationHistory
 from slack_sdk import WebClient
 from rest_framework.renderers import JSONRenderer
