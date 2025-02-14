@@ -1,7 +1,5 @@
-import boto3
 import groq
 from django.conf import settings
-import time
 import logging
 import hmac
 import hashlib
