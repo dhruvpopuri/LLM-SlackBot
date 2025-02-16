@@ -1,5 +1,6 @@
 from celery import shared_task
-from .models import SlackWorkspace, ConversationHistory
+from django.conf import settings
+from .models import SlackWorkspace
 from .clients import SlackClient, GroqClient
 import logging
 
@@ -8,15 +9,19 @@ logger = logging.getLogger(__name__)
 @shared_task
 def analyze_channel_sentiment(workspace_id, channel_id):
     try:
-        # Get workspace
+        # Get workspace using the default database connection
         workspace = SlackWorkspace.objects.get(uuid=workspace_id)
         
         # Initialize clients
         slack_client = SlackClient(workspace.bot_token)
         groq_client = GroqClient()
         
-        # Get conversation history from Slack
-        messages = slack_client.get_conversation_history(channel=channel_id, limit=100)
+        # Get conversation history from Slack - last hour only
+        messages = slack_client.get_conversation_history(
+            channel=channel_id, 
+            limit=100,
+            hours_ago=1
+        )
         
         # Format messages for analysis
         formatted_messages = "\n".join([

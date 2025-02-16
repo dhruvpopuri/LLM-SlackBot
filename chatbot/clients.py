@@ -6,6 +6,8 @@ import hashlib
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from django.conf import settings
+import time
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -62,30 +64,36 @@ class SlackClient:
             logger.error(f"Error getting file info: {e}")
             raise
 
-    def get_conversation_history(self, channel, limit=10, thread_ts=None):
+    def get_conversation_history(self, channel, limit=100, thread_ts=None, hours_ago=1):
         """
         Get conversation history from a Slack channel
         
         Args:
             channel (str): The channel ID to fetch messages from
-            limit (int): Maximum number of messages to return (default: 10)
+            limit (int): Maximum number of messages to return (default: 100)
             thread_ts (str): If provided, fetch replies from this thread
+            hours_ago (int): Number of hours to look back (default: 1)
         
         Returns:
             list: List of message objects from the conversation
         """
         try:
+            # Calculate timestamp for X hours ago
+            time_ago = int((datetime.now() - timedelta(hours=hours_ago)).timestamp())
+            
             if thread_ts:
                 response = self.client.conversations_replies(
                     channel=channel,
                     ts=thread_ts,
-                    limit=limit
+                    limit=limit,
+                    oldest=time_ago
                 )
                 return response['messages']
             else:
                 response = self.client.conversations_history(
                     channel=channel,
-                    limit=limit
+                    limit=limit,
+                    oldest=time_ago
                 )
                 return response['messages']
         except SlackApiError as e:
