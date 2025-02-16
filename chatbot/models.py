@@ -26,6 +26,7 @@ class ConversationHistory(BaseModel):
     thread_ts = models.CharField(max_length=32, null=True)
     message_ts = models.CharField(max_length=32)
     user_id = models.CharField(max_length=32)
+    message_type = models.CharField(max_length=100, default="text")
     message_text = models.TextField()
     is_bot_message = models.BooleanField(default=False)
     response = models.TextField(default="")

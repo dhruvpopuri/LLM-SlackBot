@@ -8,6 +8,7 @@ from slack_sdk import WebClient
 from rest_framework.renderers import JSONRenderer
 import logging
 import json
+from .tasks import analyze_channel_sentiment
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ class SlackEventsView(APIView):
             workspace=workspace,
             channel_id=event['channel']).order_by('-created_at')[:5]
 
+        message_type = event.get('subtype', 'text')
         # Prepare messages for Groq
         messages = [{
             "role": "system",
@@ -88,6 +90,7 @@ class SlackEventsView(APIView):
                                            thread_ts=event.get('thread_ts'),
                                            message_text=event['text'],
                                            message_ts='text',
+                                           message_type=message_type,
                                            response=response)
 
         # Send response to Slack
@@ -134,3 +137,43 @@ class SlackOAuthView(APIView):
             logger.error(f"OAuth error: {e}")
             return Response({'error': 'OAuth failed'},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ChannelSentimentAnalysisView(APIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            workspace_id = request.data.get('workspace_id')
+            channel_id = request.data.get('channel_id')
+            
+            if not workspace_id or not channel_id:
+                return Response(
+                    {"error": "workspace_id and channel_id are required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Verify workspace exists
+            try:
+                workspace = SlackWorkspace.objects.get(uuid=workspace_id)
+            except SlackWorkspace.DoesNotExist:
+                return Response(
+                    {"error": "Workspace not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Schedule the analysis task
+            task = analyze_channel_sentiment.delay(
+                workspace_id=str(workspace_id),
+                channel_id=channel_id
+            )
+            
+            return Response({
+                "message": "Sentiment analysis scheduled",
+                "task_id": task.id
+            })
+            
+        except Exception as e:
+            logger.error(f"Error scheduling sentiment analysis: {e}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

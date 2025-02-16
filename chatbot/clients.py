@@ -61,3 +61,33 @@ class SlackClient:
         except SlackApiError as e:
             logger.error(f"Error getting file info: {e}")
             raise
+
+    def get_conversation_history(self, channel, limit=10, thread_ts=None):
+        """
+        Get conversation history from a Slack channel
+        
+        Args:
+            channel (str): The channel ID to fetch messages from
+            limit (int): Maximum number of messages to return (default: 10)
+            thread_ts (str): If provided, fetch replies from this thread
+        
+        Returns:
+            list: List of message objects from the conversation
+        """
+        try:
+            if thread_ts:
+                response = self.client.conversations_replies(
+                    channel=channel,
+                    ts=thread_ts,
+                    limit=limit
+                )
+                return response['messages']
+            else:
+                response = self.client.conversations_history(
+                    channel=channel,
+                    limit=limit
+                )
+                return response['messages']
+        except SlackApiError as e:
+            logger.error(f"Error getting conversation history: {e}")
+            raise
