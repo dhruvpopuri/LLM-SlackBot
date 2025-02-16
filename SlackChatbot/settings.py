@@ -112,7 +112,8 @@ SLACK_SCOPES = [
     'channels:history',
     'chat:write',
     'im:history',
-    'commands'
+    'commands',
+    'files:read'
 ]
 
 # Internationalization

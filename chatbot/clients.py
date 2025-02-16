@@ -15,20 +15,32 @@ logger = logging.getLogger(__name__)
 class GroqClient:
 
     def __init__(self, api_key=None):
-        self.client = groq.Groq(
-            api_key=settings.GROQ_API_KEY)
+        self.client = groq.Groq(api_key=settings.GROQ_API_KEY)
 
-    def get_response(self, messages):
+    def get_response(self, messages, model="mixtral-8x7b-32768"):
         """Get response from Groq API"""
         try:
             completion = self.client.chat.completions.create(
                 messages=messages,
-                model="mixtral-8x7b-32768",
+                model=model,
                 temperature=0.7,
                 max_tokens=1024)
             return completion.choices[0].message.content
         except Exception as e:
             logger.error(f"Groq API error: {e}")
+            raise
+
+    def get_vision_response(self, messages):
+        """Get response from Groq Vision API"""
+        try:
+            completion = self.client.chat.completions.create(
+                messages=messages,
+                model="llama-3.2-11b-vision-preview",
+                temperature=0.7,
+                max_tokens=1024)
+            return completion.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Groq Vision API error: {e}")
             raise
 
 class SlackClient:
