@@ -3,7 +3,6 @@ from django.conf import settings
 from .models import SlackWorkspace, ConversationHistory, ChannelAnalysis
 from .clients import SlackClient, GroqClient
 import logging
-import boto3
 from datetime import datetime, timedelta
 import requests
 import base64

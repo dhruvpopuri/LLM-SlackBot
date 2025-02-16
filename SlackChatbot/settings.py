@@ -147,10 +147,6 @@ CELERY_DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///db.sqlite3')
 if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
     CELERY_DATABASE_URL = f"postgresql://{DATABASES['default']['USER']}:{DATABASES['default']['PASSWORD']}@{DATABASES['default']['HOST']}:{DATABASES['default']['PORT']}/{DATABASES['default']['NAME']}"
 
-# AWS Settings for S3
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-AWS_BUCKET_NAME = os.getenv('AWS_BUCKET_NAME')
 
 # Analysis Settings
 ANALYSIS_TIME_WINDOW_HOURS = int(os.getenv('ANALYSIS_TIME_WINDOW_HOURS', 1))
