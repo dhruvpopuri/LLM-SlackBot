@@ -30,3 +30,12 @@ class ConversationHistory(BaseModel):
     message_text = models.TextField()
     is_bot_message = models.BooleanField(default=False)
     response = models.TextField(default="")
+
+
+class ChannelAnalysis(BaseModel):
+    workspace = models.ForeignKey(SlackWorkspace, on_delete=models.CASCADE)
+    channel_id = models.CharField(max_length=32)
+    analysis_text = models.TextField()
+    message_count = models.IntegerField()
+    time_window_hours = models.IntegerField()
+    image_url = models.URLField(null=True, blank=True)  # For storing S3 image URL

@@ -3,11 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings, time
 from .clients import GroqClient, SlackClient
-from .models import SlackWorkspace, ConversationHistory
+from .models import SlackWorkspace, ConversationHistory, ChannelAnalysis
 from slack_sdk import WebClient
 from rest_framework.renderers import JSONRenderer
 import logging
-import json
 from .tasks import analyze_channel_sentiment
 
 logger = logging.getLogger(__name__)
@@ -18,28 +17,83 @@ class SlackEventsView(APIView):
     permission_classes = []
 
     def post(self, request, *args, **kwargs):
-        event_data = None
         try:
+            # Get request data
+            event_data = request.data
+
+            # Verify Slack request signature
             timestamp = request.headers.get('X-Slack-Request-Timestamp')
             signature = request.headers.get('X-Slack-Signature')
 
-            event_data = request.data
+            # Handle different types of requests
             if event_data.get('type') == 'url_verification':
+                # Handle URL verification challenge
                 return Response({'challenge': event_data['challenge']})
-            logger.debug(f"Received request with: {timestamp}, {signature}")
-
-            # Process event asynchronously
-            self.process_event(event_data)
+            
+            elif event_data.get('command') == '/analyze':
+                # Handle analyze command
+                return self.handle_analyze_command(event_data)
+            
+            elif event_data.get('type') == 'event_callback':
+                # Handle regular events (like mentions)
+                return self.process_event(event_data)
+            
             return Response({'ok': True})
-        except KeyError as e:
-            logger.error(f"Invalid payload")
-            logger.debug(f"{json.dumps(event_data)}")
-            return Response({"error": f"Invalid Payload: {type(e).__name__} - {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             logger.error(f"Error: {type(e).__name__} - {str(e)}")
-            return Response({"error": f"Unexpected Error {type(e).__name__} - {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def handle_analyze_command(self, command_data):
+        """Handle /analyze command"""
+        try:
+            team_id = command_data['team_id']
+            channel_id = command_data['channel_id']
+            workspace = SlackWorkspace.objects.get(team_id=team_id)
+            slack_service = SlackClient(workspace.bot_token)
+        except SlackWorkspace.DoesNotExist:
+            return Response(
+                {"error": "Workspace not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        try:
+            try:
+                hours = int(command_data.get('text', '1'))
+            except ValueError:
+                hours = 1
+            
+            # Schedule the analysis task
+            task = analyze_channel_sentiment.delay(
+                workspace_id=str(workspace.uuid),
+                channel_id=channel_id,
+                hours=hours
+            )
+            
+            # Send immediate response to Slack
+            slack_service.send_message(channel=channel_id,
+                                   text=f"🔄 Analyzing channel messages from the last {hours} hour{'s' if hours > 1 else ''}... I'll post the results here shortly!",
+                                   thread_ts=command_data.get('thread_ts'))
+            
+            return Response({'ok': True})
+
+        except Exception as e:
+            logger.error(f"Error processing analyze command: {e}")
+            slack_service.send_message(channel=channel_id,
+                                    text=f"Error starting analysis: {str(e)}",
+                                    thread_ts=command_data.get('thread_ts'))
+        
 
     def process_event(self, event_data):
+        """Process regular Slack events"""
         try:
             event = event_data['event']
             team_id = event_data['team_id']
@@ -52,8 +106,9 @@ class SlackEventsView(APIView):
             groq_service = GroqClient()
 
             if event.get('type') == 'app_mention':
-                self.handle_mention(event, workspace, slack_service,
-                                    groq_service)
+                self.handle_mention(event, workspace, slack_service, groq_service)
+
+            return Response({'ok': True})
 
         except Exception as e:
             logger.error(f"Error processing event: {e}")
